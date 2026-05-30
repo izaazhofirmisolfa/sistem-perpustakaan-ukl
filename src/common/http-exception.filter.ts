@@ -1,42 +1,30 @@
-import {
-    ExceptionFilter,
-    Catch,
-    ArgumentsHost,
-    HttpException,
-    HttpStatus,
-} from '@nestjs/common';
-import { Response } from 'express';
+ 
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import { Request, Response } from 'express';
 
 @Catch()
-export class GlobalExceptionFilter implements ExceptionFilter {
-    catch(exception: unknown, host: ArgumentsHost) {
-        const ctx = host.switchToHttp();
-        const response = ctx.getResponse<Response>();
+export class HttpExceptionFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
-        let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-        let message = 'Terjadi kesalahan pada server';
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
 
-        if (exception instanceof HttpException) {
-            statusCode = exception.getStatus();
-            const exceptionResponse = exception.getResponse();
-            if (typeof exceptionResponse === 'string') {
-                message = exceptionResponse;
-            } else if (
-                typeof exceptionResponse === 'object' &&
-                exceptionResponse !== null &&
-                'message' in exceptionResponse
-            ) {
-                const msg = (exceptionResponse as any).message;
-                message = Array.isArray(msg) ? msg.join(', ') : msg;
-            }
-        } else if (exception instanceof Error) {
-            message = exception.message;
-        }
+    const message =
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : 'Internal server error';
 
-        response.status(statusCode).json({
-            status: 'failed',
-            message,
-            data: null,
-        });
-    }
+    response.status(status).json({
+      status: 'error',
+      statusCode: status,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      message,
+    });
+  }
 }

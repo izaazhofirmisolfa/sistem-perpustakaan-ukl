@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -54,9 +54,13 @@ export class StudentsController {
 
   @Get(':id/peminjaman')
   @Roles(UserRole.ADMIN, UserRole.PETUGAS, UserRole.MEMBER)
-  @ApiOperation({ summary: 'Riwayat peminjaman + denda student tertentu' })
-  getPeminjaman(@Param('id') id: string) {
-    return this.studentsService.getPeminjamanByStudent(Number(id));
+  @ApiOperation({ summary: 'Riwayat peminjaman + denda (MEMBER hanya bisa lihat punya sendiri)' })
+  getPeminjaman(@Param('id') id: string, @Request() req: any) {
+    const requestedId = Number(id);
+    if (req.user.role === 'MEMBER' && req.user.sub !== requestedId) {
+      throw new ForbiddenException('Kamu hanya bisa melihat riwayat peminjaman milik sendiri');
+    }
+    return this.studentsService.getPeminjamanByStudent(requestedId);
   }
 
   @Put(':id')
