@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PETUGAS
+  MEMBER
+}
+
+model Student {
+  id         Int          @id @default(autoincrement())
+  nis        String?      @unique
+  nama       String?
+  email      String?      @unique
+  kelas      String?
+  jurusan    String?
+  username   String?
+  password   String?
+  role       UserRole?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  peminjaman Peminjaman[]
+}
+
+model Buku {
+  id         Int          @id @default(autoincrement())
+  title      String
+  author     String?
+  year       Int?
+  category   String?      @default("Umum")
+  stock      Int          @default(1)
+  description String?     @db.Text
+  createdAt  DateTime     @default(now())
+  updateAt   DateTime     @default(now())
+  peminjaman Peminjaman[]
+}
+
+model Peminjaman {
+  id         Int      @id @default(autoincrement())
+  borrowDate DateTime 
+  returnDate DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  bukuId     Int
+  studentId  Int
+  status     String   @default("dipinjam")
+  buku       Buku     @relation(fields: [bukuId], references: [id])
+  student    Student  @relation(fields: [studentId], references: [id])
+
+  @@index([bukuId], map: "Peminjaman_bukuId_fkey")
+  @@index([studentId], map: "Peminjaman_studentId_fkey")
+}
